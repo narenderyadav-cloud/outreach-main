@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OutreachOS — Outreach Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;background:#f8fafc;color:#1e293b;font-size:14px;min-height:100vh}
+.header{background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.header-left{display:flex;align-items:center;gap:10px}
+.logo{width:32px;height:32px;background:#2563eb;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:bold}
+.app-name{font-size:15px;font-weight:bold;color:#0f172a}
+.app-name span{color:#2563eb}
+.header-center{display:flex;align-items:center;gap:6px}
+.view-btn{padding:6px 14px;border:1px solid #e2e8f0;background:#fff;border-radius:6px;font-size:13px;font-family:Arial,sans-serif;cursor:pointer;color:#64748b;transition:all .15s}
+.view-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}
+.header-right{display:flex;align-items:center;gap:10px}
+.sync-pill{display:flex;align-items:center;gap:6px;font-size:12px;color:#64748b;background:#f1f5f9;padding:5px 10px;border-radius:6px;border:1px solid #e2e8f0}
+.sdot{width:7px;height:7px;border-radius:50%;background:#22c55e}
+.sdot.syncing{background:#f59e0b;animation:pulse 1s infinite}
+.sdot.err{background:#ef4444}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.ibtn{width:32px;height:32px;border:1px solid #e2e8f0;background:#fff;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;color:#64748b}
+.ibtn:hover{background:#f1f5f9}
+.filter-bar{background:#fff;border-bottom:1px solid #e2e8f0;padding:10px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.fl{font-size:12px;color:#64748b;font-weight:bold;white-space:nowrap}
+select,input[type=number],input[type=text],input[type=date]{font-family:Arial,sans-serif;font-size:13px;padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;color:#1e293b;outline:none}
+select:focus,input:focus{border-color:#2563eb;box-shadow:0 0 0 2px #2563eb1a}
+.fu-input{width:58px;text-align:center}
+.date-input{width:132px}
+.rlink{font-size:12px;color:#2563eb;cursor:pointer;margin-left:auto;white-space:nowrap}
+.rlink:hover{text-decoration:underline}
+.fnote{font-size:11px;color:#94a3b8}
+.fsep{width:1px;height:22px;background:#e2e8f0;flex-shrink:0}
+.main{padding:20px 24px;max-width:1440px;margin:0 auto}
+.stitle{font-size:12px;font-weight:bold;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;margin-top:20px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin-bottom:4px}
+.kpi-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px}
+.kpi-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.kpi-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;margin-bottom:10px}
+.kpi-val{font-size:24px;font-weight:bold;color:#0f172a;letter-spacing:-.5px;margin-bottom:2px}
+.kpi-lbl{font-size:12px;color:#64748b}
+.kpi-sub{font-size:11px;color:#94a3b8;margin-top:3px}
+.charts-row{display:grid;grid-template-columns:1fr 310px;gap:14px;margin-bottom:4px}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:18px}
+.ctitle{font-size:14px;font-weight:bold;color:#0f172a;margin-bottom:2px}
+.csub{font-size:12px;color:#94a3b8;margin-bottom:14px}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:4px}
+.tcard{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px}
+.tcard:hover{box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.thead2{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;flex-shrink:0}
+.tname{font-size:13px;font-weight:bold;color:#0f172a}
+.trow{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.ttype{font-size:11px;color:#64748b}
+.mprog{height:4px;background:#f1f5f9;border-radius:2px;margin:4px 0 10px;overflow:hidden}
+.mfill{height:100%;border-radius:2px;transition:width .6s}
+.abadge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:4px;font-weight:bold}
+.ayes{background:#dcfce7;color:#16a34a}
+.ano{background:#fff7ed;color:#ea580c}
+.ana{background:#f1f5f9;color:#64748b}
+.table-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:4px}
+.thead{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f1f5f9}
+.ttitle{font-size:14px;font-weight:bold;color:#0f172a}
+.pill{font-size:11px;padding:3px 10px;border-radius:20px;background:#f1f5f9;color:#64748b}
+.tscroll{overflow-x:auto;max-height:480px;overflow-y:auto}
+table{width:100%;border-collapse:collapse}
+th{position:sticky;top:0;background:#f8fafc;padding:9px 14px;text-align:left;font-size:11px;color:#64748b;font-weight:bold;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e2e8f0;white-space:nowrap;user-select:none}
+th.sortable{cursor:pointer}
+th.sortable:hover{background:#f1f5f9;color:#2563eb}
+th.sort-asc::after{content:' ↑';color:#2563eb}
+th.sort-desc::after{content:' ↓';color:#2563eb}
+td{padding:9px 14px;border-bottom:1px solid #f1f5f9;font-size:13px;vertical-align:middle;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8fafc}
+.sbadge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:bold;padding:3px 8px;border-radius:5px}
+.ss{background:#eff6ff;color:#1d4ed8}
+.si{background:#f0fdf4;color:#15803d}
+.so{background:#fff7ed;color:#c2410c}
+.sp{background:#f8fafc;color:#64748b}
+.sni{background:#fef2f2;color:#b91c1c}
+.sb2{background:#f5f3ff;color:#7c3aed}
+.drchip{display:inline-block;font-size:11px;font-weight:bold;padding:2px 7px;border-radius:4px}
+.drh{background:#f0fdf4;color:#15803d}
+.drm{background:#fffbeb;color:#b45309}
+.drl{background:#fef2f2;color:#b91c1c}
+.mcell{display:flex;align-items:center;gap:7px}
+.norows{text-align:center;padding:40px;color:#94a3b8;font-size:13px}
+.mhero{border-radius:12px;padding:22px 24px;color:#fff;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}
+.mhero h2{font-size:20px;font-weight:bold;margin-bottom:3px}
+.mhero p{font-size:13px;opacity:.8}
+.hstats{display:flex;gap:28px}
+.hsval{font-size:26px;font-weight:bold}
+.hslbl{font-size:11px;opacity:.75;margin-top:2px}
+.bigcard{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px 20px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.biglbl{font-size:11px;color:#64748b;font-weight:bold;text-transform:uppercase;letter-spacing:.5px}
+.bigval{font-size:22px;font-weight:bold;color:#0f172a;margin:4px 0}
+.bigbadge{font-size:12px;font-weight:bold;padding:6px 14px;border-radius:6px;white-space:nowrap;margin-top:4px;display:inline-block}
+.lbrow{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid #f1f5f9}
+.lbrow:hover{background:#f8fafc}
+.lbrow:last-child{border-bottom:none}
+.lbrank{font-size:13px;font-weight:bold;color:#94a3b8;width:20px;text-align:center}
+.gold{color:#d97706}.silver{color:#64748b}.bronze{color:#92400e}
+.lbbar{width:100px;height:5px;background:#f1f5f9;border-radius:3px;overflow:hidden}
+.lbfill{height:100%;border-radius:3px}
+.overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.35);z-index:999;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:12px;width:600px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.mhead{padding:18px 22px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f1f5f9}
+.mtitle{font-size:15px;font-weight:bold;color:#0f172a}
+.mclose{background:none;border:none;cursor:pointer;font-size:20px;color:#94a3b8;line-height:1;font-family:Arial,sans-serif;padding:2px 6px}
+.mclose:hover{color:#ef4444}
+.mbody{padding:20px 22px}
+.tabrow{display:flex;gap:2px;border-bottom:1px solid #e2e8f0;margin-bottom:18px}
+.tab{padding:8px 16px;font-size:13px;cursor:pointer;color:#64748b;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:Arial,sans-serif;background:none;border-left:none;border-right:none;border-top:none}
+.tab.active{color:#2563eb;border-bottom-color:#2563eb;font-weight:bold}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.slbl{font-size:12px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.sdesc{font-size:12px;color:#94a3b8;margin-bottom:8px;line-height:1.5}
+.ifw{width:100%}
+.notice{background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:10px 14px;font-size:12px;color:#1e40af;line-height:1.6;margin-bottom:16px}
+.notice code{background:#dbeafe;padding:1px 5px;border-radius:3px;font-size:11px;font-family:Arial,sans-serif}
+.notice strong{font-weight:bold}
+.slist{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.sitem{display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:7px 10px}
+.sitem input{flex:1;border:none;background:transparent;padding:0;font-size:13px;font-family:Arial,sans-serif}
+.sitem input:focus{outline:none}
+.rmbtn{background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;line-height:1;padding:0 2px}
+.addbtn{font-size:12px;color:#2563eb;cursor:pointer;border:1px dashed #93c5fd;background:#eff6ff;padding:6px 12px;border-radius:6px;font-family:Arial,sans-serif}
+.addbtn:hover{background:#dbeafe}
+.ttbl{width:100%;border-collapse:collapse}
+.ttbl th{position:static;background:#f8fafc;padding:9px 12px;font-size:11px;border:1px solid #e2e8f0;font-weight:bold;text-transform:uppercase;letter-spacing:.4px;color:#64748b}
+.ttbl td{padding:8px 10px;border:1px solid #f1f5f9;font-size:13px}
+.ttbl input[type=number]{width:80px;padding:5px 8px;border:1px solid #e2e8f0;border-radius:5px;font-size:13px;text-align:center;font-family:Arial,sans-serif}
+.ttbl input[type=number]:focus{border-color:#2563eb;outline:none}
+.btnp{background:#2563eb;color:#fff;border:none;border-radius:7px;padding:9px 20px;font-size:13px;font-family:Arial,sans-serif;cursor:pointer;font-weight:bold}
+.btnp:hover{background:#1d4ed8}
+.btns{background:#fff;color:#64748b;border:1px solid #e2e8f0;border-radius:7px;padding:9px 20px;font-size:13px;font-family:Arial,sans-serif;cursor:pointer}
+.btns:hover{background:#f8fafc}
+.mfooter{padding:14px 22px;border-top:1px solid #f1f5f9;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+.secdiv{margin-bottom:20px}
+.save-notice{font-size:12px;color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;padding:6px 12px;border-radius:6px;display:none}
+.load-state{text-align:center;padding:56px 24px;color:#94a3b8;font-size:13px;line-height:1.7}
+.load-state .spinner{width:28px;height:28px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err-bar{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 18px;color:#b91c1c;font-size:13px;margin-bottom:14px;line-height:1.6}
+.warn-bar{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;color:#92400e;font-size:12px;margin-bottom:12px}
+@media(max-width:768px){.charts-row{grid-template-columns:1fr}.main{padding:14px 12px}.filter-bar{padding:8px 12px}.header{padding:0 12px}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">O</div>
+    <span class="app-name">Outreach<span>OS</span></span>
+  </div>
+  <div class="header-center">
+    <button class="view-btn active" id="btnCeo" onclick="switchView('ceo')">📊 CEO Dashboard</button>
+    <button class="view-btn" id="btnMem" onclick="switchView('member')">👤 My Dashboard</button>
+    <div id="memWrap" style="display:none">
+      <select id="myMem" onchange="render()" style="font-size:12px"></select>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="sync-pill"><div class="sdot" id="sdot"></div><span id="stxt">Loading…</span></div>
+    <button class="ibtn" title="Refresh" onclick="syncNow()">🔄</button>
+    <button class="ibtn" title="Settings" onclick="openModal()">⚙️</button>
+  </div>
+</div>
+
+<div class="filter-bar" id="filterBar">
+  <div style="display:flex;align-items:center;gap:6px">
+    <span class="fl">Member</span>
+    <select id="fM" onchange="render()"><option value="all">All Members</option></select>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px">
+    <span class="fl">Client</span>
+    <select id="fC" onchange="render()"><option value="all">All Clients</option></select>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px">
+    <span class="fl">Status</span>
+    <select id="fS" onchange="render()">
+      <option value="all">All Statuses</option>
+      <option value="Email Sent">Email Sent</option>
+      <option value="Interested">Interested</option>
+      <option value="Not Interested">Not Interested</option>
+      <option value="Out of Office">Out of Office</option>
+      <option value="Bounced">Bounced</option>
+      <option value="Pending">Pending</option>
+    </select>
+  </div>
+  <div class="fsep"></div>
+  <div style="display:flex;align-items:center;gap:6px">
+    <span class="fl">From</span>
+    <input type="date" class="date-input" id="dateFrom" onchange="render()">
+  </div>
+  <div style="display:flex;align-items:center;gap:6px">
+    <span class="fl">To</span>
+    <input type="date" class="date-input" id="dateTo" onchange="render()">
+  </div>
+  <div class="fsep"></div>
+  <div style="display:flex;align-items:center;gap:6px">
+    <span class="fl">Sheet</span>
+    <select id="fSh" onchange="render()"><option value="all">All Weeks</option></select>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px">
+    <span class="fl">Follow-ups</span>
+    <input type="number" class="fu-input" id="fu" value="3" min="0" max="10" oninput="render()">
+    <span class="fnote">× 2-day</span>
+  </div>
+  <span class="rlink" onclick="resetF()">↺ Reset</span>
+</div>
+
+<div class="main" id="main">
+  <div class="load-state">
+    <div class="spinner"></div>
+    Connecting to Google Sheet…<br>
+    <span style="font-size:12px">Make sure sheet is set to <strong>Anyone with the link → Viewer</strong></span>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="mhead">
+      <span class="mtitle">⚙️ Settings</span>
+      <button class="mclose" onclick="closeModal()">×</button>
+    </div>
+    <div class="mbody">
+      <div class="tabrow">
+        <button class="tab active" onclick="showTab('tabSheet',this)">Google Sheet</button>
+        <button class="tab" onclick="showTab('tabTargets',this)">Team Targets</button>
+        <button class="tab" onclick="showTab('tabPrefs',this)">Preferences</button>
+      </div>
+      <div id="tabSheet" class="tab-content active">
+        <div class="notice">
+          ⚠️ Sheet must be <strong>publicly viewable</strong>: Share → Anyone with the link → Viewer → Done.<br>
+          Sheet ID is the code between <code>/d/</code> and <code>/edit</code> in your Google Sheets URL.
+        </div>
+        <div class="secdiv">
+          <div class="slbl">Sheet ID</div>
+          <input type="text" class="ifw" id="sidInp" placeholder="Paste Sheet ID">
+        </div>
+        <div class="secdiv">
+          <div class="slbl">Sheet Tabs (weekly)</div>
+          <div class="sdesc">Enter each tab name <strong>exactly</strong> as shown at the bottom of Google Sheets. Add a new row each new week.</div>
+          <div class="slist" id="slist"></div>
+          <button class="addbtn" onclick="addTab()">+ Add sheet tab</button>
+        </div>
+      </div>
+      <div id="tabTargets" class="tab-content">
+        <div class="secdiv">
+          <div class="slbl">Daily &amp; Weekly Targets per Member</div>
+          <div class="sdesc">Targets <strong>save to your browser and load automatically</strong> every time — no re-entry needed. Anyone opening the tool sees the saved targets immediately.</div>
+          <table class="ttbl">
+            <thead><tr><th>Team Member</th><th>Daily Target</th><th>Weekly Target</th></tr></thead>
+            <tbody id="tgtBody"></tbody>
+          </table>
+          <div style="margin-top:10px;font-size:12px;color:#94a3b8">💡 Click "Save Targets" below. They persist on every reload automatically.</div>
+        </div>
+      </div>
+      <div id="tabPrefs" class="tab-content">
+        <div class="secdiv">
+          <div class="slbl">Auto-Refresh Interval</div>
+          <select id="riSel">
+            <option value="0">Manual only (🔄 button)</option>
+            <option value="60000">Every 1 minute</option>
+            <option value="300000" selected>Every 5 minutes</option>
+            <option value="600000">Every 10 minutes</option>
+            <option value="1800000">Every 30 minutes</option>
+          </select>
+        </div>
+        <div class="secdiv">
+          <div class="slbl">Default Follow-ups per Email</div>
+          <div class="sdesc">Auto follow-up count per main email at 2-day intervals.</div>
+          <input type="number" id="fuDef" min="0" max="10" value="3" style="width:80px">
+        </div>
+      </div>
+    </div>
+    <div class="mfooter">
+      <span class="save-notice" id="saveNotice">✓ Saved!</span>
+      <button class="btns" onclick="closeModal()">Close</button>
+      <button class="btnp" id="saveBtn" onclick="handleSave()">Save &amp; Sync Sheet</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── KNOWN MEMBERS ───
+const META = {
+  'Ankit Singh':         {c:'#2563eb',bg:'#eff6ff',l:'AS'},
+  'Alveena':             {c:'#db2777',bg:'#fdf2f8',l:'AL'},
+  'Afsar':               {c:'#d97706',bg:'#fffbeb',l:'AF'},
+  'Nitesh':              {c:'#7c3aed',bg:'#f5f3ff',l:'NI'},
+  'Kanchan':             {c:'#0891b2',bg:'#ecfeff',l:'KA'},
+  'Deepika':             {c:'#dc2626',bg:'#fef2f2',l:'DE'},
+  'Yatin Singh Chauhan': {c:'#16a34a',bg:'#f0fdf4',l:'YS'},
+};
+const KNOWN_MEMBERS = Object.keys(META);
+
+// ─── CONFIG ───
+let CFG = {
+  sheetId: '1KZynXI1uZl7jJ21VrY88aJIB2TOuKWc6GSEPCFcKSAg',
+  tabs: ['23 March - 28 March'],
+  ri: 300000,
+  fuDef: 3,
+  targets: {},
+};
+let DATA = [], timer = null, currentView = 'ceo', bChart = null, dChart = null, activeTabId = 'tabSheet';
+let sortCol = null, sortDir = 'asc';
+
+function loadCfg() {
+  try {
+    const s = JSON.parse(localStorage.getItem('orescfg') || '{}');
+    if (s.sheetId) CFG.sheetId = s.sheetId;
+    if (s.tabs && s.tabs.length) CFG.tabs = s.tabs;
+    if (s.ri !== undefined) CFG.ri = s.ri;
+    if (s.fuDef) CFG.fuDef = s.fuDef;
+    // KEY FIX: always restore saved targets — they load automatically on every visit
+    if (s.targets && Object.keys(s.targets).length > 0) CFG.targets = s.targets;
+  } catch(e) {}
+  document.getElementById('fu').value = CFG.fuDef;
+}
+function saveCfg() { try { localStorage.setItem('orescfg', JSON.stringify(CFG)); } catch(e) {} }
+
+// ─── DATE PARSING — handles ALL Google Sheets formats ───
+const MO_FULL  = {january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11};
+const MO_SHORT = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+
+function normDate(str) {
+  if (!str && str !== 0) return '';
+  str = String(str).trim();
+  if (!str) return '';
+
+  // 1. gviz format: Date(2026,2,23) — month is 0-indexed
+  const gviz = str.match(/Date\((\d+),(\d+),(\d+)\)/i);
+  if (gviz) return iso(new Date(+gviz[1], +gviz[2], +gviz[3]));
+
+  // 2. Excel serial number (5-digit, e.g. 46103 = 23 Mar 2026)
+  if (/^\d{5}$/.test(str)) {
+    const d = new Date(Math.round((parseInt(str) - 25569) * 86400 * 1000));
+    if (!isNaN(d)) return iso(d);
+  }
+
+  // 3. ISO: 2026-03-23
+  if (/^\d{4}-\d{1,2}-\d{1,2}/.test(str)) {
+    const d = new Date(str.slice(0,10) + 'T00:00:00');
+    if (!isNaN(d)) return iso(d);
+  }
+
+  const lower = str.toLowerCase();
+
+  // 4. "23 March 2026" or "23 Mar 2026"
+  const m1 = lower.match(/^(\d{1,2})\s+([a-z]+)\s+(\d{4})$/);
+  if (m1) {
+    const mo = MO_FULL[m1[2]] ?? MO_SHORT[m1[2].slice(0,3)];
+    if (mo !== undefined) return iso(new Date(+m1[3], mo, +m1[1]));
+  }
+
+  // 5. "23/03/2026" DD/MM/YYYY (Indian / Google Sheets date picker default)
+  const m2 = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m2) {
+    const [, a, b, yr] = m2.map(Number);
+    // If first part > 12, must be DD/MM; otherwise assume DD/MM for India
+    return iso(new Date(yr, b - 1, a));
+  }
+
+  // 6. "23-03-2026" DD-MM-YYYY
+  const m3 = str.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (m3) return iso(new Date(+m3[3], +m3[2]-1, +m3[1]));
+
+  // 7. "03/23/2026" MM/DD/YYYY US
+  const m4 = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m4 && +m4[1] <= 12) return iso(new Date(+m4[3], +m4[1]-1, +m4[2]));
+
+  // 8. Native Date last resort
+  const d = new Date(str);
+  if (!isNaN(d)) return iso(d);
+  return '';
+}
+function iso(d) { return isNaN(d) ? '' : d.toISOString().slice(0,10); }
+function todayISO() { return new Date().toISOString().slice(0,10); }
+function weekISOs() {
+  const n=new Date(),d=n.getDay(),mon=new Date(n);
+  mon.setDate(n.getDate()-(d===0?6:d-1));
+  return Array.from({length:7},(_,i)=>{const x=new Date(mon);x.setDate(mon.getDate()+i);return iso(x);});
+}
+
+// ─── CSV ───
+function parseCSV(txt) {
+  const rows=[];
+  for(const line of txt.split('\n')){
+    if(!line.trim()) continue;
+    const cols=[];let cur='',q=false;
+    for(const ch of line){
+      if(ch==='"') q=!q;
+      else if(ch===','&&!q){cols.push(cur.trim());cur='';}
+      else cur+=ch;
+    }
+    cols.push(cur.trim());rows.push(cols);
+  }
+  return rows;
+}
+
+async function fetchWT(url,ms=15000){
+  const ctrl=new AbortController(),id=setTimeout(()=>ctrl.abort(),ms);
+  try{const r=await fetch(url,{signal:ctrl.signal});clearTimeout(id);return r;}
+  catch(e){clearTimeout(id);if(e.name==='AbortError')throw new Error('Timed out (15s) — check Sheet ID and tab name');throw e;}
+}
+
+async function fetchTab(id,tab){
+  const url=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}`;
+  const res=await fetchWT(url);
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  const txt=await res.text();
+  if(txt.trim().startsWith('<!')) throw new Error(`Tab "${tab}" not found or sheet is private`);
+  const rows=parseCSV(txt);
+  const result=[];let hdr=true;
+  for(const r of rows){
+    if(hdr){hdr=false;continue;}
+    const member=(r[8]||'').trim();
+    if(!member) continue;
+    const rawDate=(r[6]||'').trim();
+    result.push({
+      domain:  (r[0]||'').trim().replace(/['"]/g,''),
+      email:   (r[3]||r[4]||r[5]||'').trim().replace(/['"\n\r]/g,''),
+      sentOn:  rawDate,
+      sentISO: normDate(rawDate),
+      status:  (r[7]||'').trim()||'Pending',
+      member,
+      client:  (r[9]||'').trim(),
+      cat:     (r[10]||'').trim(),
+      dr:      parseInt(r[11])||0,
+      traffic: parseInt((r[12]||'').replace(/,/g,''))||0,
+      sheet:   tab,
+    });
+  }
+  return result;
+}
+
+// ─── SYNC ───
+async function syncData(){
+  setSyncing();
+  const errors=[],all=[];
+  for(const tab of CFG.tabs){
+    if(!tab.trim()) continue;
+    try{all.push(...await fetchTab(CFG.sheetId,tab.trim()));}
+    catch(e){errors.push(`"${tab}": ${e.message}`);}
+  }
+  if(all.length>0){
+    DATA=all;setSynced();initFilters();render();
+    if(errors.length){showWarn('Some tabs failed: '+errors.join(' | '));}
+    else{const w=document.getElementById('pw');if(w)w.remove();}
+  } else {
+    setErr();
+    document.getElementById('main').innerHTML=`
+      <div class="err-bar"><strong>⚠️ Could not load data</strong><br>${errors.map(e=>'• '+e).join('<br>')}<br><br>
+      <strong>Fix:</strong> Share → Anyone with the link → Viewer. Check tab name exactly matches Google Sheets bottom tab.<br><br>
+      <button class="btnp" onclick="openModal()" style="font-size:12px;padding:7px 14px">⚙️ Settings</button>
+      &nbsp;<button class="btns" onclick="syncNow()" style="font-size:12px;padding:7px 14px">🔄 Retry</button></div>`;
+  }
+}
+function setSyncing(){document.getElementById('sdot').className='sdot syncing';document.getElementById('stxt').textContent='Syncing…';}
+function setSynced(){document.getElementById('sdot').className='sdot';document.getElementById('stxt').textContent='Synced '+new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});}
+function setErr(){document.getElementById('sdot').className='sdot err';document.getElementById('stxt').textContent='Sync failed';}
+function syncNow(){syncData();}
+function showWarn(msg){let w=document.getElementById('pw');if(!w){w=document.createElement('div');w.id='pw';w.className='warn-bar';document.getElementById('main').prepend(w);}w.textContent='⚠️ '+msg;}
+function setupTimer(){if(timer)clearInterval(timer);if(CFG.ri>0)timer=setInterval(syncData,CFG.ri);}
+
+// ─── FILTERS ───
+function uniq(arr){return[...new Set(arr.filter(Boolean))];}
+function initFilters(){
+  const members=uniq(DATA.map(r=>r.member)).sort();
+  const clients=uniq(DATA.map(r=>r.client)).sort();
+  const sheets=uniq(DATA.map(r=>r.sheet)).sort();
+  fillSel('fM',members,'All Members');fillSel('fC',clients,'All Clients');fillSel('fSh',sheets,'All Weeks');
+  const mm=document.getElementById('myMem'),cur=mm.value;
+  mm.innerHTML=members.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m}</option>`).join('');
+}
+function fillSel(id,items,lbl){const s=document.getElementById(id),cur=s.value;s.innerHTML=`<option value="all">${lbl}</option>`+items.map(i=>`<option value="${i}"${i===cur?' selected':''}>${i}</option>`).join('');}
+function getFiltered(){
+  const fm=v('fM'),fc=v('fC'),fs=v('fS'),fsh=v('fSh');
+  const df=document.getElementById('dateFrom').value;
+  const dt=document.getElementById('dateTo').value;
+  return DATA.filter(r=>{
+    if(fm!=='all'&&r.member!==fm) return false;
+    if(fc!=='all'&&r.client!==fc) return false;
+    if(fsh!=='all'&&r.sheet!==fsh) return false;
+    if(fs!=='all'){
+      if(fs==='Pending'&&r.status!=='Pending') return false;
+      if(fs!=='Pending'&&r.status!==fs) return false;
+    }
+    if(df&&r.sentISO&&r.sentISO<df) return false;
+    if(dt&&r.sentISO&&r.sentISO>dt) return false;
+    return true;
+  });
+}
+function v(id){return document.getElementById(id)?.value||'all';}
+function fuVal(){return parseInt(document.getElementById('fu').value)||0;}
+function resetF(){
+  ['fM','fC','fS','fSh'].forEach(id=>document.getElementById(id).value='all');
+  document.getElementById('dateFrom').value='';
+  document.getElementById('dateTo').value='';
+  document.getElementById('fu').value=CFG.fuDef;
+  sortCol=null;sortDir='asc';render();
+}
+
+// ─── VIEW SWITCH ───
+function switchView(vw){
+  currentView=vw;
+  document.getElementById('btnCeo').classList.toggle('active',vw==='ceo');
+  document.getElementById('btnMem').classList.toggle('active',vw==='member');
+  document.getElementById('filterBar').style.display=vw==='ceo'?'':'none';
+  document.getElementById('memWrap').style.display=vw==='member'?'':'none';
+  render();
+}
+function render(){currentView==='ceo'?renderCEO():renderMem();}
+
+// ─── STATUS CONFIG ───
+const SCFG = {
+  'Email Sent':     {icon:'📧',ib:'#eff6ff',ic:'#2563eb',badge:'ss',label:'✉ Sent'},
+  'Interested':     {icon:'🔥',ib:'#f0fdf4',ic:'#16a34a',badge:'si',label:'🔥 Interested'},
+  'Not Interested': {icon:'👎',ib:'#fef2f2',ic:'#b91c1c',badge:'sni',label:'👎 Not Interested'},
+  'Out of Office':  {icon:'📅',ib:'#fff7ed',ic:'#d97706',badge:'so',label:'📅 OOO'},
+  'Bounced':        {icon:'↩️',ib:'#f5f3ff',ic:'#7c3aed',badge:'sb2',label:'↩️ Bounced'},
+  'Pending':        {icon:'⏳',ib:'#f8fafc',ic:'#94a3b8',badge:'sp',label:'⏳ Pending'},
+};
+function sBadge(s){const c=SCFG[s]||SCFG['Pending'];return`<span class="sbadge ${c.badge}">${c.label}</span>`;}
+
+// ─── CEO VIEW ───
+function renderCEO(){
+  if(!DATA.length) return;
+  const f=getFiltered(),n=fuVal();
+  const members=uniq(DATA.map(r=>r.member)).sort();
+  const cnt={};f.forEach(r=>{cnt[r.status]=(cnt[r.status]||0)+1;});
+  const sent=f.filter(r=>r.status!=='Pending').length;
+  const inter=cnt['Interested']||0,notInt=cnt['Not Interested']||0;
+  const ooo=cnt['Out of Office']||0,bounced=cnt['Bounced']||0;
+  const pend=cnt['Pending']||0,fuTotal=sent*(1+n);
+  const rr=sent>0?((inter/sent)*100).toFixed(1):'0.0';
+
+  const kpis=[
+    {icon:'📋',val:f.length,   lbl:'Total Leads',    sub:'filtered view',              ib:'#eff6ff',ic:'#2563eb'},
+    {icon:'📧',val:sent,        lbl:'Emails Sent',     sub:'main emails only',           ib:'#f0fdf4',ic:'#16a34a'},
+    {icon:'🔄',val:fuTotal,     lbl:'Total Outreach',  sub:`incl. ${n} follow-up${n!==1?'s':''}`,ib:'#faf5ff',ic:'#7c3aed'},
+    {icon:'🔥',val:inter,       lbl:'Interested',      sub:'hot leads',                  ib:'#fff7ed',ic:'#ea580c'},
+    {icon:'👎',val:notInt,      lbl:'Not Interested',  sub:'declined',                   ib:'#fef2f2',ic:'#b91c1c'},
+    {icon:'📅',val:ooo,         lbl:'Out of Office',   sub:'follow-up needed',           ib:'#fffbeb',ic:'#d97706'},
+    {icon:'↩️',val:bounced,    lbl:'Bounced',         sub:'undeliverable',              ib:'#f5f3ff',ic:'#7c3aed'},
+    {icon:'⏳',val:pend,        lbl:'Not Contacted',   sub:'queue pending',              ib:'#f8fafc',ic:'#94a3b8'},
+    {icon:'📈',val:rr+'%',      lbl:'Response Rate',   sub:'interested / sent',          ib:'#fdf2f8',ic:'#db2777'},
+  ];
+
+  document.getElementById('main').innerHTML=`
+    <div class="stitle">Overview</div>
+    <div class="kpi-grid">${kpis.map(k=>`
+      <div class="kpi-card">
+        <div class="kpi-icon" style="background:${k.ib}">${k.icon}</div>
+        <div class="kpi-val">${typeof k.val==='number'?k.val.toLocaleString():k.val}</div>
+        <div class="kpi-lbl">${k.lbl}</div>
+        <div class="kpi-sub">${k.sub}</div>
+      </div>`).join('')}
+    </div>
+    <div class="stitle">Team Targets — ${new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}</div>
+    ${renderTargets(members,n)}
+    <div class="stitle">Analytics</div>
+    <div class="charts-row">
+      <div class="card"><div class="ctitle">Emails by Team Member</div><div class="csub">Main emails + follow-ups stacked</div><canvas id="bc" height="190"></canvas></div>
+      <div class="card"><div class="ctitle">Lead Status Distribution</div><div class="csub">Across all filtered leads</div><canvas id="dc" height="190"></canvas></div>
+    </div>
+    <div class="stitle">Team Leaderboard</div>
+    ${renderLB(members,n)}
+    <div class="stitle">Lead Details</div>
+    ${renderTable(f)}
+  `;
+  drawCharts(f,members,n);
+}
+
+function renderTargets(members,n){
+  const today=todayISO(),wk=weekISOs();
+  return`<div class="tgrid">${members.map(m=>{
+    const mc=META[m]||{c:'#2563eb',bg:'#eff6ff',l:m.slice(0,2).toUpperCase()};
+    const tgt=CFG.targets[m]||{daily:0,weekly:0};
+    const mSent=DATA.filter(r=>r.member===m&&r.status!=='Pending');
+    const ts=mSent.filter(r=>r.sentISO===today).length;
+    const ws=mSent.filter(r=>wk.includes(r.sentISO)).length;
+    const dp=tgt.daily>0?Math.min(100,Math.round(ts/tgt.daily*100)):0;
+    const wp=tgt.weekly>0?Math.min(100,Math.round(ws/tgt.weekly*100)):0;
+    const da=tgt.daily>0&&ts>=tgt.daily,wa=tgt.weekly>0&&ws>=tgt.weekly;
+    return`<div class="tcard">
+      <div class="thead2">
+        <div class="av" style="width:30px;height:30px;font-size:11px;background:${mc.bg};color:${mc.c}">${mc.l}</div>
+        <div><div class="tname">${m}</div><div style="font-size:11px;color:#94a3b8">${mSent.length} sent total</div></div>
+      </div>
+      <div class="trow"><div class="ttype">Daily Target</div>${tgt.daily>0?`<span class="abadge ${da?'ayes':'ano'}">${da?'✓ Met':'Pending'}</span>`:`<span class="abadge ana">Not set</span>`}</div>
+      <div class="trow" style="margin-bottom:2px"><div style="font-size:13px;font-weight:bold">${ts}</div><div style="font-size:12px;color:#64748b">/ ${tgt.daily||'—'}</div></div>
+      <div class="mprog"><div class="mfill" style="width:${dp}%;background:${da?'#22c55e':mc.c}"></div></div>
+      <div class="trow"><div class="ttype">Weekly Target</div>${tgt.weekly>0?`<span class="abadge ${wa?'ayes':'ano'}">${wa?'✓ Met':'In Progress'}</span>`:`<span class="abadge ana">Not set</span>`}</div>
+      <div class="trow" style="margin-bottom:2px"><div style="font-size:13px;font-weight:bold">${ws}</div><div style="font-size:12px;color:#64748b">/ ${tgt.weekly||'—'}</div></div>
+      <div class="mprog"><div class="mfill" style="width:${wp}%;background:${wa?'#22c55e':mc.c}"></div></div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderLB(members,n){
+  const rows=members.map(m=>{const d=DATA.filter(r=>r.member===m&&r.status!=='Pending');return{m,s:d.length,t:d.length*(1+n),i:d.filter(r=>r.status==='Interested').length};}).sort((a,b)=>b.t-a.t);
+  const max=rows[0]?.t||1;
+  return`<div class="card" style="margin-bottom:4px">${rows.map((r,i)=>{
+    const mc=META[r.m]||{c:'#2563eb',bg:'#eff6ff',l:'?'};
+    const rc=i===0?'gold':i===1?'silver':i===2?'bronze':'';
+    return`<div class="lbrow">
+      <div class="lbrank ${rc}">${i+1}</div>
+      <div class="av" style="width:28px;height:28px;font-size:10px;background:${mc.bg};color:${mc.c}">${mc.l}</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:bold">${r.m}</div><div style="font-size:11px;color:#94a3b8">${r.s} main · ${r.i} interested</div></div>
+      <div class="lbbar"><div class="lbfill" style="width:${Math.round(r.t/max*100)}%;background:${mc.c}"></div></div>
+      <div style="text-align:right;min-width:55px"><div style="font-size:13px;font-weight:bold">${r.t}</div><div style="font-size:11px;color:#94a3b8">total</div></div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+// ─── SORTABLE TABLE ───
+function setSort(col){
+  if(sortCol===col) sortDir=sortDir==='asc'?'desc':'asc';
+  else{sortCol=col;sortDir='asc';}
+  render();
+}
+function sorted(rows){
+  if(!sortCol) return rows;
+  return[...rows].sort((a,b)=>{
+    let av=String(a[sortCol]||'').toLowerCase(),bv=String(b[sortCol]||'').toLowerCase();
+    if(av<bv) return sortDir==='asc'?-1:1;
+    if(av>bv) return sortDir==='asc'?1:-1;
+    return 0;
+  });
+}
+function thS(col,lbl){const cls=sortCol===col?(sortDir==='asc'?'sort-asc':'sort-desc'):'';return`<th class="sortable ${cls}" onclick="setSort('${col}')">${lbl}</th>`;}
+function drC(d){return d>0?`<span class="drchip ${d>=70?'drh':d>=50?'drm':'drl'}">${d}</span>`:'—';}
+
+function renderTable(data){
+  const vis=sorted(data.filter(r=>r.domain||r.email)).slice(0,500);
+  return`<div class="table-card">
+    <div class="thead">
+      <span class="ttitle">All Leads</span>
+      <span class="pill">${data.length} leads · ${vis.length} shown${sortCol?' · sorted by '+sortCol:''}</span>
+    </div>
+    <div class="tscroll"><table>
+      <thead><tr>
+        <th>#</th><th>Domain</th><th>Email</th>
+        ${thS('member','Team Member')}
+        ${thS('client','Client')}
+        ${thS('status','Status')}
+        <th>Date Sent</th><th>DR</th><th>Traffic</th>
+        ${thS('cat','Category')}
+        <th>Sheet / Week</th>
+      </tr></thead>
+      <tbody>${vis.length===0
+        ?`<tr><td colspan="11" class="norows">No leads match current filters.</td></tr>`
+        :vis.map((r,i)=>{
+            const mc=META[r.member]||{c:'#2563eb',bg:'#eff6ff',l:'?'};
+            return`<tr>
+              <td style="color:#94a3b8">${i+1}</td>
+              <td style="font-weight:bold;max-width:180px;overflow:hidden;text-overflow:ellipsis" title="${r.domain}">${r.domain||'—'}</td>
+              <td style="color:#64748b;font-size:12px;max-width:190px;overflow:hidden;text-overflow:ellipsis">${r.email?r.email.substring(0,30)+(r.email.length>30?'…':''):'—'}</td>
+              <td><div class="mcell"><div class="av" style="width:24px;height:24px;font-size:9px;background:${mc.bg};color:${mc.c}">${mc.l}</div>${r.member}</div></td>
+              <td>${r.client||'—'}</td>
+              <td>${sBadge(r.status)}</td>
+              <td style="color:#64748b">${r.sentOn||'—'}</td>
+              <td>${drC(r.dr)}</td>
+              <td style="color:#64748b">${r.traffic>0?r.traffic.toLocaleString():'—'}</td>
+              <td style="color:#64748b;font-size:12px">${r.cat||'—'}</td>
+              <td><span class="pill" style="font-size:10px">${r.sheet}</span></td>
+            </tr>`;
+          }).join('')
+      }</tbody>
+    </table></div>
+  </div>`;
+}
+
+// ─── MEMBER VIEW ───
+function renderMem(){
+  const name=document.getElementById('myMem')?.value;
+  if(!name||!DATA.length){document.getElementById('main').innerHTML='<div class="load-state">Select a team member above.</div>';return;}
+  const n=fuVal(),mc=META[name]||{c:'#2563eb',bg:'#eff6ff',l:'?'};
+  const tgt=CFG.targets[name]||{daily:0,weekly:0};
+  const my=DATA.filter(r=>r.member===name),sent=my.filter(r=>r.status!=='Pending');
+  const today=todayISO(),wk=weekISOs();
+  const ts=sent.filter(r=>r.sentISO===today).length;
+  const ws=sent.filter(r=>wk.includes(r.sentISO)).length;
+  const inter=sent.filter(r=>r.status==='Interested').length;
+  const da=tgt.daily>0&&ts>=tgt.daily,wa=tgt.weekly>0&&ws>=tgt.weekly;
+  const dp=tgt.daily>0?Math.min(100,Math.round(ts/tgt.daily*100)):0;
+  const wp=tgt.weekly>0?Math.min(100,Math.round(ws/tgt.weekly*100)):0;
+  const vis=my.filter(r=>r.domain||r.email);
+  document.getElementById('main').innerHTML=`
+    <div class="mhero" style="background:${mc.c}">
+      <div><h2>Hello, ${name.split(' ')[0]} 👋</h2><p>${new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</p></div>
+      <div class="hstats">
+        <div><div class="hsval">${sent.length}</div><div class="hslbl">Emails Sent</div></div>
+        <div><div class="hsval">${sent.length*(1+n)}</div><div class="hslbl">Total w/ Follow-ups</div></div>
+        <div><div class="hsval">${inter}</div><div class="hslbl">Interested 🔥</div></div>
+      </div>
+    </div>
+    <div class="stitle">My Targets</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+      <div class="bigcard">
+        <div style="flex:1">
+          <div class="biglbl">📅 Today's Target</div>
+          <div class="bigval">${ts} <span style="font-size:14px;color:#94a3b8;font-weight:normal">/ ${tgt.daily||'—'}</span></div>
+          <div style="margin:10px 0 0">
+            <div class="mprog" style="height:7px;border-radius:4px"><div class="mfill" style="width:${dp}%;background:${da?'#22c55e':mc.c};height:100%"></div></div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:5px">${dp}% complete${tgt.daily>0?' · '+Math.max(0,tgt.daily-ts)+' more needed':''}</div>
+          </div>
+        </div>
+        <div>${tgt.daily>0?`<span class="bigbadge ${da?'ayes':'ano'}">${da?'✅ Target Met!':'⏳ In Progress'}</span>`:`<span class="bigbadge ana">Target not set</span>`}</div>
+      </div>
+      <div class="bigcard">
+        <div style="flex:1">
+          <div class="biglbl">📆 Weekly Target</div>
+          <div class="bigval">${ws} <span style="font-size:14px;color:#94a3b8;font-weight:normal">/ ${tgt.weekly||'—'}</span></div>
+          <div style="margin:10px 0 0">
+            <div class="mprog" style="height:7px;border-radius:4px"><div class="mfill" style="width:${wp}%;background:${wa?'#22c55e':mc.c};height:100%"></div></div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:5px">${wp}% complete${tgt.weekly>0?' · '+Math.max(0,tgt.weekly-ws)+' more needed':''}</div>
+          </div>
+        </div>
+        <div>${tgt.weekly>0?`<span class="bigbadge ${wa?'ayes':'ano'}">${wa?'✅ Target Met!':'⏳ In Progress'}</span>`:`<span class="bigbadge ana">Target not set</span>`}</div>
+      </div>
+    </div>
+    <div class="stitle">My Leads (${my.length} total)</div>
+    <div class="table-card">
+      <div class="thead"><span class="ttitle">My Outreach List</span><span class="pill">${vis.length} leads</span></div>
+      <div class="tscroll"><table>
+        <thead><tr><th>#</th><th>Domain</th><th>Email</th><th>Status</th><th>Date Sent</th><th>DR</th><th>Traffic</th><th>Client</th><th>Week</th></tr></thead>
+        <tbody>${vis.map((r,i)=>`<tr>
+          <td style="color:#94a3b8">${i+1}</td>
+          <td style="font-weight:bold;max-width:160px;overflow:hidden;text-overflow:ellipsis">${r.domain||'—'}</td>
+          <td style="color:#64748b;font-size:12px">${r.email?r.email.substring(0,28)+(r.email.length>28?'…':''):'—'}</td>
+          <td>${sBadge(r.status)}</td>
+          <td style="color:#64748b">${r.sentOn||'—'}</td>
+          <td>${drC(r.dr)}</td>
+          <td style="color:#64748b">${r.traffic>0?r.traffic.toLocaleString():'—'}</td>
+          <td style="color:#64748b">${r.client||'—'}</td>
+          <td><span class="pill" style="font-size:10px">${r.sheet}</span></td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>
+  `;
+}
+
+// ─── CHARTS ───
+function drawCharts(data,members,n){
+  const bc=document.getElementById('bc'),dc2=document.getElementById('dc');
+  if(!bc||!dc2) return;
+  const rows=members.map(m=>{const d=data.filter(r=>r.member===m&&r.status!=='Pending');return{nm:m.split(' ')[0],s:d.length,fu:d.length*n,mc:META[m]||{c:'#2563eb'}};});
+  if(bChart) bChart.destroy();
+  bChart=new Chart(bc.getContext('2d'),{type:'bar',data:{labels:rows.map(r=>r.nm),datasets:[
+    {label:'Main Emails',data:rows.map(r=>r.s),backgroundColor:rows.map(r=>r.mc.c+'cc'),borderColor:rows.map(r=>r.mc.c),borderWidth:1.5,borderRadius:5},
+    {label:'Follow-ups', data:rows.map(r=>r.fu),backgroundColor:rows.map(r=>r.mc.c+'33'),borderColor:rows.map(r=>r.mc.c+'55'),borderWidth:1,borderRadius:5}
+  ]},options:{responsive:true,plugins:{legend:{labels:{font:{family:'Arial',size:11},color:'#64748b'}}},scales:{x:{stacked:true,ticks:{font:{family:'Arial',size:11},color:'#64748b'},grid:{color:'#f1f5f9'}},y:{stacked:true,ticks:{font:{family:'Arial',size:11},color:'#64748b'},grid:{color:'#f1f5f9'}}}}});
+  const sm={},SC={'Email Sent':'#2563eb','Interested':'#16a34a','Not Interested':'#b91c1c','Out of Office':'#d97706','Bounced':'#7c3aed','Pending':'#94a3b8'};
+  data.forEach(r=>{sm[r.status]=(sm[r.status]||0)+1;});
+  if(dChart) dChart.destroy();
+  dChart=new Chart(dc2.getContext('2d'),{type:'doughnut',data:{labels:Object.keys(sm),datasets:[{data:Object.values(sm),backgroundColor:Object.keys(sm).map(k=>SC[k]||'#94a3b8'),borderWidth:2,borderColor:'#fff',hoverOffset:6}]},options:{responsive:true,cutout:'62%',plugins:{legend:{position:'bottom',labels:{font:{family:'Arial',size:11},color:'#64748b',padding:12}}}}});
+}
+
+// ─── SETTINGS MODAL ───
+function openModal(){
+  document.getElementById('sidInp').value=CFG.sheetId;
+  document.getElementById('riSel').value=String(CFG.ri);
+  document.getElementById('fuDef').value=CFG.fuDef;
+  document.getElementById('saveNotice').style.display='none';
+  buildSList();buildTgtTable();
+  document.getElementById('overlay').classList.add('open');
+  showTab(activeTabId,document.querySelector('.tab.active')||document.querySelector('.tab'));
+}
+function closeModal(){document.getElementById('overlay').classList.remove('open');}
+function showTab(tabId,el){
+  activeTabId=tabId;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  const tgt=document.getElementById(tabId);if(tgt) tgt.classList.add('active');
+  document.getElementById('saveBtn').textContent=tabId==='tabTargets'?'Save Targets':tabId==='tabPrefs'?'Save Preferences':'Save & Sync Sheet';
+}
+function buildSList(){
+  document.getElementById('slist').innerHTML=CFG.tabs.map((t,i)=>`
+    <div class="sitem"><input type="text" value="${t}" placeholder="e.g. 23 March - 28 March" id="st${i}"><button class="rmbtn" onclick="rmTab(${i})">×</button></div>`).join('');
+}
+function addTab(){CFG.tabs.push('');buildSList();}
+function rmTab(i){CFG.tabs.splice(i,1);buildSList();}
+function buildTgtTable(){
+  const allMems=uniq([...KNOWN_MEMBERS,...uniq(DATA.map(r=>r.member))]).sort();
+  document.getElementById('tgtBody').innerHTML=allMems.map(m=>{
+    const mc=META[m]||{c:'#2563eb',bg:'#eff6ff',l:m.slice(0,2).toUpperCase()};
+    const t=CFG.targets[m]||{daily:0,weekly:0};
+    const key=m.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
+    return`<tr>
+      <td><div class="mcell"><div class="av" style="width:24px;height:24px;font-size:9px;background:${mc.bg};color:${mc.c}">${mc.l}</div>${m}</div></td>
+      <td><input type="number" min="0" max="999" value="${t.daily}" id="td_${key}" placeholder="0"></td>
+      <td><input type="number" min="0" max="999" value="${t.weekly}" id="tw_${key}" placeholder="0"></td>
+    </tr>`;
+  }).join('');
+}
+function handleSave(){
+  if(activeTabId==='tabTargets') saveTargets();
+  else if(activeTabId==='tabPrefs') savePrefs();
+  else saveSheet();
+}
+function saveTargets(){
+  uniq([...KNOWN_MEMBERS,...uniq(DATA.map(r=>r.member))]).forEach(m=>{
+    const key=m.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
+    const d=document.getElementById(`td_${key}`),w=document.getElementById(`tw_${key}`);
+    if(d&&w){
+      if(!CFG.targets[m]) CFG.targets[m]={daily:0,weekly:0};
+      CFG.targets[m].daily=parseInt(d.value)||0;
+      CFG.targets[m].weekly=parseInt(w.value)||0;
+    }
+  });
+  saveCfg();
+  const n=document.getElementById('saveNotice');n.style.display='inline-block';setTimeout(()=>n.style.display='none',2500);
+  if(DATA.length>0) render();
+}
+function savePrefs(){
+  CFG.ri=parseInt(document.getElementById('riSel').value)||0;
+  CFG.fuDef=parseInt(document.getElementById('fuDef').value)||3;
+  document.getElementById('fu').value=CFG.fuDef;
+  saveCfg();setupTimer();
+  const n=document.getElementById('saveNotice');n.style.display='inline-block';setTimeout(()=>n.style.display='none',2500);
+}
+function saveSheet(){
+  CFG.sheetId=document.getElementById('sidInp').value.trim();
+  CFG.tabs=[];
+  document.querySelectorAll('[id^="st"]').forEach(inp=>{if(inp.value.trim()) CFG.tabs.push(inp.value.trim());});
+  if(!CFG.tabs.length) CFG.tabs=['23 March - 28 March'];
+  saveCfg();closeModal();syncData();
+}
+document.getElementById('overlay').addEventListener('click',e=>{if(e.target===document.getElementById('overlay')) closeModal();});
+
+// ─── INIT ───
+loadCfg();
+setupTimer();
+syncData();
+</script>
+</body>
+</html>
